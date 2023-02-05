@@ -32,6 +32,7 @@ function SignIn({navigation}: SignInScreenProps) {
       return Alert.alert('알림', '비밀번호를 입력해주세요.');
     }
     Alert.alert('알림', '로그인 되었습니다.');
+    // navigation.navigate('')
   }, [email, password]);
 
   const toSignUp = useCallback(() => {
