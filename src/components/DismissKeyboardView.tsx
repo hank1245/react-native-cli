@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  TouchableWithoutFeedback,
-  Keyboard,
-  StyleProp,
-  ViewStyle,
-  KeyboardAvoidingView,
-} from 'react-native';
+import {TouchableWithoutFeedback, Keyboard} from 'react-native';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scrollview';
 
 const DismissKeyboardView = ({children, ...props}) => (
