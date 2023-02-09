@@ -9,16 +9,15 @@ import Delivery from './src/pages/Delivery';
 import {useState, useEffect} from 'react';
 import SignIn from './src/pages/SignIn';
 import SignUp from './src/pages/SignUp';
-import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
-import {Provider, useSelector} from 'react-redux';
-import {RootState} from './src/store/reducer';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import useSocket from './src/hooks/useSocket';
 import axios, {AxiosError} from 'axios';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Config from 'react-native-config';
-import {useAppDispatch} from './src/store';
+import {useAppDispatch, useAppSelector} from './src/store';
 import {Alert} from 'react-native';
 import userSlice from './src/slices/userSlice';
+import orderSlice from './src/slices/orderSlice';
 
 export type LoggedInParamList = {
   Orders: undefined;
@@ -36,12 +35,41 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppInner() {
-  const isLoggedIn = useSelector((state: RootState) => !!state.user.email);
+  const isLoggedIn = useAppSelector(state => !!state.user.email);
   const [socket, disconnect] = useSocket();
   const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    axios.interceptors.response.use(
+      response => response,
+      async error => {
+        const {
+          response: {status},
+          config,
+        } = error;
+        if (status === 419) {
+          if (error.response.data.code === 'expired') {
+            const originalRequest = config;
+            const refreshToken = await EncryptedStorage.getItem('refreshToken');
+            const {data} = await axios.post(
+              `${Config.API_URL}/refreshToken`,
+              {},
+              {headers: {Authorization: `Bearer ${refreshToken}`}},
+            );
+            dispatch(userSlice.actions.setAccessToken(data.data.accessToken));
+            originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+            return axios(originalRequest);
+          }
+        }
+        return Promise.reject(error);
+      },
+    );
+  }, []);
+
   useEffect(() => {
     const helloCallback = (data: any) => {
       console.log(data);
+      dispatch(orderSlice.actions.addOrder(data));
     };
     if (socket && isLoggedIn) {
       socket.emit('acceptOrder', 'hello');
@@ -72,7 +100,7 @@ function AppInner() {
           {},
           {
             headers: {
-              authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
           },
         );
